@@ -66,9 +66,10 @@ async function refreshSearchPost(guild, room) {
 const groupEmbed = (request, guild) => {
   const voice = request.voice ? guild.channels.cache.get(request.voice) : null;
   const ids = voice ? [...voice.members.values()].filter(member => !member.user.bot).map(member => member.id) : request.members;
-  return new EmbedBuilder().setTitle(`В поиске | ${request.title}`)
+  const embed = new EmbedBuilder().setTitle(`В поиске | ${request.title}`)
     .setDescription(`**Владелец:** <@${request.owner}>\n**Места:** ${ids.length}/${request.places}\n**Участники${voice ? ' войса' : ''}:**\n${ids.length ? ids.map((id, index) => `${index + 1}. <@${id}>`).join('\n') : 'Пока никого нет'}${voice ? `\n\n**Войс:** ${voice}` : ''}`)
     .setColor(0x5865f2);
+  return request.banner ? embed.setImage('attachment://robrun-squad.png') : embed;
 };
 async function refreshGroupPost(guild, messageId, request) {
   const channel = guild.channels.cache.get(state.config.search);
@@ -76,7 +77,7 @@ async function refreshGroupPost(guild, messageId, request) {
   try { await channel.messages.edit(messageId, { embeds: [groupEmbed(request, guild)] }); }
   catch (error) { if (error.code === 10008) { delete state.requests[messageId]; save(); } else console.error('Не удалось обновить сбор:', error); }
 }
-const helpEmbed = () => new EmbedBuilder().setImage('attachment://help-banner.png').setColor(0x242428);
+const helpEmbed = () => new EmbedBuilder().setImage('attachment://robrun-help.png').setColor(0x242428);
 const helpButtons = () => rows(button('help:question', 'Задать вопрос'), button('help:report', 'Пожаловаться'), button('help:moderator', 'Позвать модератора'));
 const commands = [
   new SlashCommandBuilder().setName('настройка').setDescription('Настроить каналы бота')
@@ -135,18 +136,18 @@ client.on('interactionCreate', async i => { try {
       if (!result.existing && i.member.voice?.channelId) await i.member.voice.setChannel(result.voice);
       return i.editReply(result.existing ? `У вас уже есть комната: ${result.voice}.` : `Комната ${result.voice} создана. Панель управления находится в чате самой комнаты.`);
     }
-    if (i.commandName === 'помощь-панель') { await i.channel.send({ embeds: [helpEmbed()], files: [new AttachmentBuilder(path.join(assetsDir, 'help-banner.png'))], components: helpButtons() }); return i.editReply('Панель опубликована.'); }
+    if (i.commandName === 'помощь-панель') { await i.channel.send({ embeds: [helpEmbed()], files: [new AttachmentBuilder(path.join(assetsDir, 'robrun-help.png'))], components: helpButtons() }); return i.editReply('Панель опубликована.'); }
     if (i.commandName === 'тег') {
       const role = i.options.getRole('роль');
       if (!i.memberPermissions.has(PermissionFlagsBits.MentionEveryone) && !role.mentionable) return i.editReply('Эту роль нельзя упомянуть. Сделайте её упоминаемой или выдайте право «Упоминать @everyone, @here и все роли».');
-      await i.channel.send({ content: `<@&${role.id}>`, embeds: [new EmbedBuilder().setTitle('Объявление').setDescription(i.options.getString('сообщение')).setFooter({ text: `Автор: ${i.user.username}` }).setColor(0x5865f2)], allowedMentions: { roles: [role.id] } });
+      await i.channel.send({ content: `<@&${role.id}>`, embeds: [new EmbedBuilder().setTitle('Объявление').setDescription(i.options.getString('сообщение')).setImage('attachment://robrun-announcement.png').setFooter({ text: `Автор: ${i.user.username}` }).setColor(0x5865f2)], files: [new AttachmentBuilder(path.join(assetsDir, 'robrun-announcement.png'))], allowedMentions: { roles: [role.id] } });
       return i.editReply('Сообщение отправлено.');
     }
     if (i.commandName === 'сбор') {
       const channel = i.guild.channels.cache.get(state.config.search); if (!channel) return i.editReply('Сначала настройте канал поиска через /настройка.');
       const role = i.options.getRole('роль'); const places = i.options.getInteger('места');
-      const request = { owner: i.user.id, title: i.options.getString('название'), places, voice: i.member.voice?.channelId || null, members: [i.user.id] };
-      const message = await channel.send({ content: role ? `<@&${role.id}>` : '', embeds: [groupEmbed(request, i.guild)], components: rows(button('join', 'Присоединиться', ButtonStyle.Success), button('leave', 'Выйти', ButtonStyle.Danger)), allowedMentions: { roles: role && (role.mentionable || i.memberPermissions.has(PermissionFlagsBits.MentionEveryone)) ? [role.id] : [] } });
+      const request = { owner: i.user.id, title: i.options.getString('название'), places, voice: i.member.voice?.channelId || null, members: [i.user.id], banner: true };
+      const message = await channel.send({ content: role ? `<@&${role.id}>` : '', embeds: [groupEmbed(request, i.guild)], files: [new AttachmentBuilder(path.join(assetsDir, 'robrun-squad.png'))], components: rows(button('join', 'Присоединиться', ButtonStyle.Success), button('leave', 'Выйти', ButtonStyle.Danger)), allowedMentions: { roles: role && (role.mentionable || i.memberPermissions.has(PermissionFlagsBits.MentionEveryone)) ? [role.id] : [] } });
       state.requests[message.id] = request; save();
       return i.editReply(`Набор опубликован: ${message.url}`);
     }
