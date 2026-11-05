@@ -1,0 +1,17 @@
+[Unit]
+Description=Balagan Discord bot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=balagan
+WorkingDirectory=/opt/balagan-bot
+EnvironmentFile=/opt/balagan-bot/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
